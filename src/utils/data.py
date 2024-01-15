@@ -35,7 +35,7 @@ def generate_age_data(age, height_range, weight_range, data):
         weight = round(random.uniform(*weight_range), 1)
         data.append((age, height, weight))
 
-def generate_data():
+def generate_dataset():
     data = []
     for age, height_range, weight_range in age_groups_data:
         generate_age_data(age, height_range, weight_range, data)

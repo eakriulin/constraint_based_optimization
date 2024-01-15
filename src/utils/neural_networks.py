@@ -6,89 +6,80 @@ def layer(features_in, features_out):
 
     return (W, b)
 
-def train(neural_network, X, Y, number_of_epochs, learning_rate):
+def train(nn, X, Y, number_of_epochs, learning_rate):
     for e in range(0, number_of_epochs):
-        As, Zs = forward(neural_network, X)
+        As, Zs = forward(nn, X)
         loss = MSE(As[-1], Y)
 
         print(f"epoch {e + 1}, loss {loss}")
 
         loss_derivative = MSE(As[-1], Y, as_derivative_wrt_A=True)
-        gradients, _, _ = backward(neural_network, X, As, Zs, loss_derivative)
+        gradients, _, _ = backward(nn, X, As, Zs, loss_derivative)
 
-        update_parameters(neural_network, gradients, learning_rate)
+        update_parameters(nn, gradients, learning_rate)
 
-def train_with_constraint(
-    nn_height_age,
-    nn_age_weight,
-    nn_height_weight,
-    X_height,
-    Y_age,
-    Y_weight,
-    number_of_epochs,
-    learning_rate,
-):
+def train_with_constraint(nn_1, nn_2, nn_3, X_1_and_3, Y_1, Y_2_and_3, number_of_epochs, learning_rate):
     for e in range(0, number_of_epochs):
-        As_height_age, Zs_height_age = forward(nn_height_age, X_height)
-        As_age_weight, Zs_age_weight = forward(nn_age_weight, As_height_age[-1])
-        As_height_weight, Zs_height_weight = forward(nn_height_weight, X_height)
+        As_1, Zs_1 = forward(nn_1, X_1_and_3)
+        As_2, Zs_2 = forward(nn_2, As_1[-1])
+        As_3, Zs_3 = forward(nn_3, X_1_and_3)
 
-        loss_height_age = MSE(As_height_age[-1], Y_age)
-        loss_age_weight = MSE(As_age_weight[-1], Y_weight)
-        loss_height_weight = MSE(As_height_weight[-1], Y_weight)
-        loss_constraint = MSE(As_height_weight[-1], As_age_weight[-1])
+        loss_1 = MSE(As_1[-1], Y_1)
+        loss_2 = MSE(As_2[-1], Y_2_and_3)
+        loss_3 = MSE(As_3[-1], Y_2_and_3)
+        loss_constraint = MSE(As_3[-1], As_2[-1])
 
-        loss = loss_height_age + loss_age_weight + loss_height_weight + loss_constraint
+        loss = loss_1 + loss_2 + loss_3 + loss_constraint
         print(f"epoch {e + 1}, loss {loss}")
-        print(f"\tloss_height_age {loss_height_age}, loss_age_weight {loss_age_weight}, loss_height_weight {loss_height_weight}, loss_constraint {loss_constraint}")
+        print(f"    loss 1 {loss_1}, loss 2 {loss_2}, loss 3 {loss_3}, loss constraint {loss_constraint}")
 
-        W1_gradients = []
-        W2_gradients = []
-        W3_gradients = []
+        gradients_1 = []
+        gradients_2 = []
+        gradients_3 = []
 
-        # loss_age_weight wrt W2
-        loss_age_weight_derivative_wrt_A = MSE(As_age_weight[-1], Y_weight, as_derivative_wrt_A=True)
-        W2_gradients_for_age_weight, W2_delta_for_age_weight, W2_W_for_age_weight = backward(nn_age_weight, As_height_age[-1], As_age_weight, Zs_age_weight, loss_derivative=loss_age_weight_derivative_wrt_A)
-        W2_gradients.append(W2_gradients_for_age_weight)
+        # note: loss_2 wrt nn_2
+        loss_2_derivative_wrt_A = MSE(As_2[-1], Y_2_and_3, as_derivative_wrt_A=True)
+        loss_2_gradients_wrt_nn_2, loss_2_last_delta_wrt_nn_2, loss_2_last_W_wrt_nn_2 = backward(nn_2, As_1[-1], As_2, Zs_2, loss_derivative=loss_2_derivative_wrt_A)
+        gradients_2.append(loss_2_gradients_wrt_nn_2)
 
-        # loss_constraint wrt W2
-        loss_constraint_derivative_wrt_Y = MSE(As_height_weight[-1], As_age_weight[-1], as_derivative_wrt_Y=True)
-        W2_gradients_for_constraint, W2_delta_for_constraint, W2_W_for_constraint = backward(nn_age_weight, As_height_age[-1], As_age_weight, Zs_age_weight, loss_derivative=loss_constraint_derivative_wrt_Y)
-        W2_gradients.append(W2_gradients_for_constraint)
+        # note: loss_constraint wrt nn_2
+        loss_constraint_derivative_wrt_Y = MSE(As_3[-1], As_2[-1], as_derivative_wrt_Y=True)
+        loss_constraint_gradients_wrt_nn_2, loss_constraint_last_delta_wrt_nn_2, loss_constraint_last_W_wrt_nn_2 = backward(nn_2, As_1[-1], As_2, Zs_2, loss_derivative=loss_constraint_derivative_wrt_Y)
+        gradients_2.append(loss_constraint_gradients_wrt_nn_2)
 
-        # loss_height_weight wrt W3
-        loss_height_weight_derivative_wrt_A = MSE(As_height_weight[-1], Y_weight, as_derivative_wrt_A=True)
-        W3_gradients_for_height_weight, _, _ = backward(nn_height_weight, X_height, As_height_weight, Zs_height_weight, loss_derivative=loss_height_weight_derivative_wrt_A)
-        W3_gradients.append(W3_gradients_for_height_weight)
+        # note: loss_3 wrt nn_3
+        loss_3_derivative_wrt_A = MSE(As_3[-1], Y_2_and_3, as_derivative_wrt_A=True)
+        loss_3_gradients_wrt_nn_3, _, _ = backward(nn_3, X_1_and_3, As_3, Zs_3, loss_derivative=loss_3_derivative_wrt_A)
+        gradients_3.append(loss_3_gradients_wrt_nn_3)
 
-        # loss_constraint wrt W3
-        loss_constraint_derivative_wrt_A = MSE(As_height_weight[-1], As_age_weight[-1], as_derivative_wrt_A=True)
-        W3_gradients_for_constraint, _, _ = backward(nn_height_weight, X_height, As_height_weight, Zs_height_weight, loss_derivative=loss_constraint_derivative_wrt_A)
-        W3_gradients.append(W3_gradients_for_constraint)
+        # note: loss_constraint wrt nn_3
+        loss_constraint_derivative_wrt_A = MSE(As_3[-1], As_2[-1], as_derivative_wrt_A=True)
+        loss_constraint_gradients_wrt_nn_3, _, _ = backward(nn_3, X_1_and_3, As_3, Zs_3, loss_derivative=loss_constraint_derivative_wrt_A)
+        gradients_3.append(loss_constraint_gradients_wrt_nn_3)
 
-        # loss_height_age wrt W1
-        loss_height_age_derivative_wrt_A = MSE(As_height_age[-1], Y_age, as_derivative_wrt_A=True)
-        W1_gradients_for_height_age, _, _ = backward(nn_height_age, X_height, As_height_age, Zs_height_age, loss_derivative=loss_height_age_derivative_wrt_A)
-        W1_gradients.append(W1_gradients_for_height_age)
+        # note: loss_1 wrt nn_1
+        loss_1_derivative_wrt_A = MSE(As_1[-1], Y_1, as_derivative_wrt_A=True)
+        loss_1_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, loss_derivative=loss_1_derivative_wrt_A)
+        gradients_1.append(loss_1_gradients_wrt_nn_1)
 
-        # loss_age_weight wrt W1
-        W1_gradients_for_age_weight, _, _ = backward(nn_height_age, X_height, As_height_age, Zs_height_age, delta=W2_delta_for_age_weight, W_of_succeeding_layer=W2_W_for_age_weight)
-        W1_gradients.append(W1_gradients_for_age_weight)
+        # note: loss_2 wrt nn_1
+        loss_2_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_2_last_delta_wrt_nn_2, W_of_next_layer=loss_2_last_W_wrt_nn_2)
+        gradients_1.append(loss_2_gradients_wrt_nn_1)
 
-        # loss_constraint wrt W1
-        W1_gradients_for_constraint, _, _ = backward(nn_height_age, X_height, As_height_age, Zs_height_age, delta=W2_delta_for_constraint, W_of_succeeding_layer=W2_W_for_constraint)
-        W1_gradients.append(W1_gradients_for_constraint)
+        # note: loss_constraint wrt nn_1
+        loss_constraint_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_constraint_last_delta_wrt_nn_2, W_of_next_layer=loss_constraint_last_W_wrt_nn_2)
+        gradients_1.append(loss_constraint_gradients_wrt_nn_1)
 
-        W1_reduced_gradients = reduce_gradients(W1_gradients)
-        W2_reduced_gradients = reduce_gradients(W2_gradients)
-        W3_reduced_gradients = reduce_gradients(W3_gradients)
+        gradients_1 = reduce_gradients(gradients_1)
+        gradients_2 = reduce_gradients(gradients_2)
+        gradients_3 = reduce_gradients(gradients_3)
 
-        update_parameters(nn_height_age, W1_reduced_gradients, learning_rate)
-        update_parameters(nn_age_weight, W2_reduced_gradients, learning_rate)
-        update_parameters(nn_height_weight, W3_reduced_gradients, learning_rate)
+        update_parameters(nn_1, gradients_1, learning_rate)
+        update_parameters(nn_2, gradients_2, learning_rate)
+        update_parameters(nn_3, gradients_3, learning_rate)
 
-def forward(neural_network, X):
-    number_of_layers = len(neural_network)
+def forward(nn, X):
+    number_of_layers = len(nn)
     last_layer_idx = number_of_layers - 1
 
     Zs = [None] * number_of_layers # note: layer input x layer weights + bias
@@ -97,7 +88,7 @@ def forward(neural_network, X):
     layer_input = X
 
     for l in range(0, number_of_layers):
-        W, b = neural_network[l]
+        W, b = nn[l]
         layer_input = X if l == 0 else As[l - 1]
 
         Zs[l] = np.matmul(layer_input, W) + b
@@ -105,8 +96,10 @@ def forward(neural_network, X):
 
     return As, Zs
 
-def backward(neural_network, X, As, Zs, loss_derivative=None, delta=None, W_of_succeeding_layer=None):
-    number_of_layers = len(neural_network)
+def backward(nn, X, As, Zs, loss_derivative=None, delta=None, W_of_next_layer=None):
+    assert((loss_derivative is not None) != (delta is not None))
+
+    number_of_layers = len(nn)
     last_layer_idx = number_of_layers - 1
 
     gradients = [None] * number_of_layers
@@ -115,8 +108,8 @@ def backward(neural_network, X, As, Zs, loss_derivative=None, delta=None, W_of_s
         if l == last_layer_idx and loss_derivative is not None:
             delta = loss_derivative # note: linear activation on last later
         else:
-            W_of_succeeding_layer, _ = (W_of_succeeding_layer.T, None) if W_of_succeeding_layer is not None else neural_network[l + 1]
-            delta = np.matmul(delta, W_of_succeeding_layer.T) * sigmoid(Zs[l], as_derivative_wrt_Z=True)
+            W_of_next_layer, _ = (W_of_next_layer.T, None) if W_of_next_layer is not None else nn[l + 1]
+            delta = np.matmul(delta, W_of_next_layer.T) * sigmoid(Zs[l], as_derivative_wrt_Z=True)
 
         W_gradient = None
         if l != 0:
@@ -128,17 +121,7 @@ def backward(neural_network, X, As, Zs, loss_derivative=None, delta=None, W_of_s
 
         gradients[l] = (W_gradient, b_gradient)
 
-    return gradients, delta, W_of_succeeding_layer
-
-def update_parameters(neural_network, gradients, learning_rate):
-    number_of_layers = len(neural_network)
-
-    for l in range(0, number_of_layers):
-        W, b = neural_network[l]
-        W_grad, b_grad = gradients[l]
-
-        W -= learning_rate * W_grad
-        b -= learning_rate * b_grad
+    return gradients, delta, W_of_next_layer
 
 def reduce_gradients(all_gradients):
     number_of_layers = len(all_gradients[0])
@@ -156,6 +139,15 @@ def reduce_gradients(all_gradients):
 
     return reduced_gradients
 
+def update_parameters(nn, gradients, learning_rate):
+    number_of_layers = len(nn)
+
+    for l in range(0, number_of_layers):
+        W, b = nn[l]
+        W_grad, b_grad = gradients[l]
+
+        W -= learning_rate * W_grad
+        b -= learning_rate * b_grad
 
 def sigmoid(Z, as_derivative_wrt_Z=False):
     if (as_derivative_wrt_Z):
@@ -172,6 +164,6 @@ def MSE(A, Y, as_derivative_wrt_A=False, as_derivative_wrt_Y=False):
 
     return np.mean((A - Y) ** 2)
 
-def predict(neural_network, input):
-    As, _ = forward(neural_network, input)
+def predict(nn, input):
+    As, _ = forward(nn, input)
     return As[-1]
