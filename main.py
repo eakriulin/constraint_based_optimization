@@ -34,12 +34,18 @@ if __name__ == "__main__":
 
     if args.height_age:
         nn_utils.train(nn_height_age, X_train_height, Y_train_age, NUMBER_OF_EPOCHS, LEARNING_RATE)
+        print(f"height->age nn: R2 score = {nn_utils.eval(nn_height_age, X_test_height, Y_test_age)}")
 
     if args.age_weight:
         nn_utils.train(nn_age_weight, X_train_age, Y_train_weight, NUMBER_OF_EPOCHS, LEARNING_RATE)
+        print(f"age->height nn: R2 score = {nn_utils.eval(nn_age_weight, X_test_age, Y_test_weight)}")
 
     if args.height_weight:
         nn_utils.train(nn_height_weight, X_train_height, Y_train_weight, NUMBER_OF_EPOCHS, LEARNING_RATE)
+        print(f"height->weight nn: R2 score = {nn_utils.eval(nn_height_weight, X_test_height, Y_test_weight)}")
 
     if args.constraint:
         nn_utils.train_with_constraint(nn_height_age, nn_age_weight, nn_height_weight, X_train_height, Y_train_age, Y_train_weight, NUMBER_OF_EPOCHS, LEARNING_RATE)
+        print(f"height->age nn: R2 score = {nn_utils.eval(nn_height_age, X_test_height, Y_test_age)}")
+        print(f"age->height nn: R2 score = {nn_utils.eval(nn_age_weight, X_test_age, Y_test_weight)}")
+        print(f"height->weight nn: R2 score = {nn_utils.eval(nn_height_weight, X_test_height, Y_test_weight)}")

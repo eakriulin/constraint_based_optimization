@@ -164,6 +164,14 @@ def MSE(A, Y, as_derivative_wrt_A=False, as_derivative_wrt_Y=False):
 
     return np.mean((A - Y) ** 2)
 
-def predict(nn, input):
-    As, _ = forward(nn, input)
-    return As[-1]
+def R2(A, Y):
+    sse = np.sum((A - Y) ** 2)
+
+    mean_Y = np.mean(Y)
+    sst = np.sum((Y - mean_Y) ** 2)
+
+    return 1 - (sse / sst)
+
+def eval(nn, X, Y):
+    As, _ = forward(nn, X)
+    return R2(As[-1], Y)
