@@ -27,26 +27,30 @@ age_groups_data = [
     (20, (167.6, 185.4), (49.9, 74.8))
 ]
 
-def generate_age_data(age, height_range, weight_range, data):
-    number_of_examples = 20
-
+def generate_age_data(age, height_range, weight_range, number_of_examples, data):
     for _ in range(number_of_examples):
         height = round(random.uniform(*height_range), 1)
         weight = round(random.uniform(*weight_range), 1)
         data.append((age, height, weight))
 
-def generate_dataset():
-    data = []
-    for age, height_range, weight_range in age_groups_data:
-        generate_age_data(age, height_range, weight_range, data)
-
-    with open(os.path.join('dataset', 'age_height_weight_dataset.csv'), 'w') as file:
+def write_data_to_file(filepath, data):
+    with open(filepath, 'w') as file:
         writer = csv.writer(file)
         field = ["age", "height", "weight"]
 
         writer.writerow(field)
         for row in data:
             writer.writerow(row)
+
+def generate_dataset():
+    train_data = []
+    test_data = []
+    for age, height_range, weight_range in age_groups_data:
+        generate_age_data(age, height_range, weight_range, number_of_examples=25, data=train_data)
+        generate_age_data(age, height_range, weight_range, number_of_examples=5, data=test_data)
+
+    write_data_to_file(os.path.join('dataset', 'train', 'age_height_weight_dataset.csv'), train_data)
+    write_data_to_file(os.path.join('dataset', 'test', 'age_height_weight_dataset.csv'), test_data)
 
 def normalize_data(X, mean=None, std=None):
     mean = np.mean(X) if mean is None else mean
