@@ -51,9 +51,3 @@ def generate_dataset():
 
     write_data_to_file(os.path.join('dataset', 'train', 'age_height_weight_dataset.csv'), train_data)
     write_data_to_file(os.path.join('dataset', 'test', 'age_height_weight_dataset.csv'), test_data)
-
-def normalize_data(X, mean=None, std=None):
-    mean = np.mean(X) if mean is None else mean
-    std = np.std(X) if std is None else std
-
-    return (X - mean) / std, mean, std

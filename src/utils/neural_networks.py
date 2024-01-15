@@ -1,5 +1,11 @@
 import numpy as np
 
+def normalize_data(X, mean=None, std=None):
+    mean = np.mean(X) if mean is None else mean
+    std = np.std(X) if std is None else std
+
+    return (X - mean) / std, mean, std
+
 def layer(features_in, features_out):
     W = np.random.randn(features_in, features_out).astype(dtype=np.float64)
     b = np.random.randn(features_out).astype(dtype=np.float64)
