@@ -7,11 +7,11 @@ import src.utils.dataset as dataset_utils
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--generate_dataset', action='store_true')
-    parser.add_argument('--height_age', action='store_true')
-    parser.add_argument('--age_weight', action='store_true')
-    parser.add_argument('--height_weight', action='store_true')
-    parser.add_argument('--constraint', action='store_true')
+    parser.add_argument('--generate_dataset', action='store_true', help='If passed, the dataset will be generated')
+    parser.add_argument('--height_age', action='store_true', help='If passed, the height_age nn will be trained and evaluated')
+    parser.add_argument('--age_weight', action='store_true', help='If passed, the age_weight nn will be trained and evaluated')
+    parser.add_argument('--height_weight', action='store_true', help='If passed, the height_weight nn will be trained and evaluated')
+    parser.add_argument('--constraint', action='store_true', help='If passed, all three nns will be trained in constraint mode and evaluated')
     args = parser.parse_args()
 
     if args.generate_dataset:
