@@ -1,7 +1,6 @@
 import random
 import os
 import csv
-import numpy as np
 
 # note: age in years, height range in cm, weight range in kg
 age_groups_data = [

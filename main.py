@@ -5,7 +5,7 @@ import src.neural_networks.height_weight as height_weight
 import src.utils.neural_networks as nn_utils
 import src.utils.dataset as dataset_utils
 
-NUMBER_OF_EPOCHS = 20000
+NUMBER_OF_EPOCHS = 10000
 LEARNING_RATE = 0.001
 
 if __name__ == "__main__":
@@ -20,13 +20,13 @@ if __name__ == "__main__":
     if args.generate_dataset:
         dataset_utils.generate_dataset()
 
-    X_train_height, Y_train_age, X_test_height, Y_test_age = height_age.initialize_inputs_and_targets()
-    X_train_age, Y_train_weight, X_test_age, Y_test_weight = age_weight.initialize_inputs_and_targets()
+    inputs_train_height, Y_train_age, inputs_test_height, Y_test_age = height_age.initialize_inputs_and_targets()
+    inputs_train_age, Y_train_weight, inputs_test_age, Y_test_weight = age_weight.initialize_inputs_and_targets()
 
-    X_train_height, mean_train_height, std_train_height = nn_utils.normalize_data(X_train_height)
-    X_test_height, mean_test_height, std_test_height = nn_utils.normalize_data(X_test_height)
-    X_train_age, mean_train_age, std_train_age = nn_utils.normalize_data(X_train_age)
-    X_test_age, mean_test_age, std_test_age = nn_utils.normalize_data(X_test_age)
+    X_train_height, mean_height, std_height = nn_utils.normalize_data(inputs_train_height)
+    X_test_height, _, _ = nn_utils.normalize_data(inputs_test_height, mean_height, std_height)
+    X_train_age, mean_age, std_age = nn_utils.normalize_data(inputs_train_age)
+    X_test_age, _, _ = nn_utils.normalize_data(inputs_test_age, mean_age, std_age)
 
     nn_height_age = height_age.initialize_neural_network()
     nn_age_weight = age_weight.initialize_neural_network()
@@ -34,18 +34,38 @@ if __name__ == "__main__":
 
     if args.height_age:
         nn_utils.train(nn_height_age, X_train_height, Y_train_age, NUMBER_OF_EPOCHS, LEARNING_RATE)
-        print(f"height->age nn: R2 score = {nn_utils.eval(nn_height_age, X_test_height, Y_test_age)}")
+        print("\nEvaluation:")
+        print(f"height->age nn: MSE = {nn_utils.eval(nn_height_age, X_test_height, Y_test_age)}")
+
+        print("\nPrediction:")
+        print(f"height->age nn: height {inputs_test_height[49:50][0][0]} cm -> age {nn_utils.predict(nn_height_age, X_test_height[49:50])[0][0]} years")
 
     if args.age_weight:
         nn_utils.train(nn_age_weight, X_train_age, Y_train_weight, NUMBER_OF_EPOCHS, LEARNING_RATE)
-        print(f"age->height nn: R2 score = {nn_utils.eval(nn_age_weight, X_test_age, Y_test_weight)}")
+        print("\nEvaluation:")
+        print(f"age->weight nn: MSE = {nn_utils.eval(nn_age_weight, X_test_age, Y_test_weight)}")
+
+        print("\nPrediction:")
+        print(f"age->weight nn: age {inputs_test_age[49:50][0][0]} years -> weight {nn_utils.predict(nn_age_weight, X_test_age[49:50])[0][0]} kg")
 
     if args.height_weight:
         nn_utils.train(nn_height_weight, X_train_height, Y_train_weight, NUMBER_OF_EPOCHS, LEARNING_RATE)
-        print(f"height->weight nn: R2 score = {nn_utils.eval(nn_height_weight, X_test_height, Y_test_weight)}")
+        print("\nEvaluation:")
+        print(f"height->weight nn: MSE = {nn_utils.eval(nn_height_weight, X_test_height, Y_test_weight)}")
+
+        print("\nPrediction:")
+        print(f"height->weight nn: height {inputs_test_height[49:50][0][0]} cm -> weight {nn_utils.predict(nn_height_weight, X_test_height[49:50])[0][0]} kg")
 
     if args.constraint:
         nn_utils.train_with_constraint(nn_height_age, nn_age_weight, nn_height_weight, X_train_height, Y_train_age, Y_train_weight, NUMBER_OF_EPOCHS, LEARNING_RATE)
-        print(f"height->age nn: R2 score = {nn_utils.eval(nn_height_age, X_test_height, Y_test_age)}")
-        print(f"age->height nn: R2 score = {nn_utils.eval(nn_age_weight, X_test_age, Y_test_weight)}")
-        print(f"height->weight nn: R2 score = {nn_utils.eval(nn_height_weight, X_test_height, Y_test_weight)}")
+        print("\nEvaluation:")
+        print(f"height->age->weight nn: MSE = {nn_utils.eval_chain(nn_height_age, nn_age_weight, X_test_height, Y_test_weight)}")
+        print(f"height->age nn: MSE = {nn_utils.eval(nn_height_age, X_test_height, Y_test_age)}")
+        print(f"age->weight nn: MSE = {nn_utils.eval(nn_age_weight, X_test_age, Y_test_weight)}")
+        print(f"height->weight nn: MSE = {nn_utils.eval(nn_height_weight, X_test_height, Y_test_weight)}")
+
+        print("\nPrediction:")
+        print(f"height->age->weight nn: height {inputs_test_height[49:50][0][0]} cm -> weight {nn_utils.predict_chain(nn_height_age, nn_age_weight, X_test_height[49:50])[0][0]} kg")
+        print(f"height->age nn: height {inputs_test_height[49:50][0][0]} cm -> age {nn_utils.predict(nn_height_age, X_test_height[49:50])[0][0]} years")
+        print(f"age->weight nn: age {inputs_test_age[49:50][0][0]} years -> weight {nn_utils.predict(nn_age_weight, X_test_age[49:50])[0][0]} kg")
+        print(f"height->weight nn: height {inputs_test_height[49:50][0][0]} cm -> weight {nn_utils.predict(nn_height_weight, X_test_height[49:50])[0][0]} kg")

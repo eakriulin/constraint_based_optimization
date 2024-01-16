@@ -69,11 +69,11 @@ def train_with_constraint(nn_1, nn_2, nn_3, X_1_and_3, Y_1, Y_2_and_3, number_of
         gradients_1.append(loss_1_gradients_wrt_nn_1)
 
         # note: loss_2 wrt nn_1
-        loss_2_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_2_last_delta_wrt_nn_2, W_of_next_layer=loss_2_last_W_wrt_nn_2)
+        loss_2_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_2_last_delta_wrt_nn_2, W=loss_2_last_W_wrt_nn_2)
         gradients_1.append(loss_2_gradients_wrt_nn_1)
 
         # note: loss_constraint wrt nn_1
-        loss_constraint_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_constraint_last_delta_wrt_nn_2, W_of_next_layer=loss_constraint_last_W_wrt_nn_2)
+        loss_constraint_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_constraint_last_delta_wrt_nn_2, W=loss_constraint_last_W_wrt_nn_2)
         gradients_1.append(loss_constraint_gradients_wrt_nn_1)
 
         gradients_1 = reduce_gradients(gradients_1)
@@ -102,7 +102,7 @@ def forward(nn, X):
 
     return As, Zs
 
-def backward(nn, X, As, Zs, loss_derivative=None, delta=None, W_of_next_layer=None):
+def backward(nn, X, As, Zs, loss_derivative=None, delta=None, W=None):
     assert((loss_derivative is not None) != (delta is not None))
 
     number_of_layers = len(nn)
@@ -114,7 +114,12 @@ def backward(nn, X, As, Zs, loss_derivative=None, delta=None, W_of_next_layer=No
         if l == last_layer_idx and loss_derivative is not None:
             delta = loss_derivative # note: linear activation on last later
         else:
-            W_of_next_layer, _ = (W_of_next_layer.T, None) if W_of_next_layer is not None else nn[l + 1]
+            if W is not None:
+                W_of_next_layer = W
+                W = None
+            else:
+                W_of_next_layer, _ = nn[l + 1]
+
             delta = np.matmul(delta, W_of_next_layer.T) * sigmoid(Zs[l], as_derivative_wrt_Z=True)
 
         W_gradient = None
@@ -127,7 +132,8 @@ def backward(nn, X, As, Zs, loss_derivative=None, delta=None, W_of_next_layer=No
 
         gradients[l] = (W_gradient, b_gradient)
 
-    return gradients, delta, W_of_next_layer
+    W_of_first_layer, _ = nn[0]
+    return gradients, delta, W_of_first_layer
 
 def reduce_gradients(all_gradients):
     number_of_layers = len(all_gradients[0])
@@ -170,14 +176,20 @@ def MSE(A, Y, as_derivative_wrt_A=False, as_derivative_wrt_Y=False):
 
     return np.mean((A - Y) ** 2)
 
-def R2(A, Y):
-    sse = np.sum((A - Y) ** 2)
-
-    mean_Y = np.mean(Y)
-    sst = np.sum((Y - mean_Y) ** 2)
-
-    return 1 - (sse / sst)
-
 def eval(nn, X, Y):
     As, _ = forward(nn, X)
-    return R2(As[-1], Y)
+    return MSE(As[-1], Y)
+
+def eval_chain(nn_1, nn_2, X, Y):
+    As_1, _ = forward(nn_1, X)
+    As_2, _ = forward(nn_2, As_1[-1])
+    return MSE(As_2[-1], Y)
+
+def predict(nn, X):
+    As, _ = forward(nn, X)
+    return As[-1]
+
+def predict_chain(nn_1, nn_2, X):
+    As_1, _ = forward(nn_1, X)
+    As_2, _ = forward(nn_2, As_1[-1])
+    return As_2[-1]
