@@ -25,6 +25,11 @@ def train(nn, X, Y, number_of_epochs, learning_rate):
         update_parameters(nn, gradients, learning_rate)
 
 def train_with_constraint(nn_1, nn_2, nn_3, X_1_and_3, Y_1, Y_2_and_3, number_of_epochs, learning_rate):
+    alpha_1 = 1
+    alpha_2 = 0.1 # note: nn_2 should learn slower and "wait" until nn_1 learns its parameters
+    alpha_3 = 1
+    alpha_constraint = 1
+
     for e in range(0, number_of_epochs):
         As_1, Zs_1 = forward(nn_1, X_1_and_3)
         As_2, Zs_2 = forward(nn_2, As_1[-1])
@@ -45,35 +50,35 @@ def train_with_constraint(nn_1, nn_2, nn_3, X_1_and_3, Y_1, Y_2_and_3, number_of
 
         # note: loss_2 wrt nn_2
         loss_2_derivative_wrt_A = MSE(As_2[-1], Y_2_and_3, as_derivative_wrt_A=True)
-        loss_2_gradients_wrt_nn_2, loss_2_last_delta_wrt_nn_2, loss_2_last_W_wrt_nn_2 = backward(nn_2, As_1[-1], As_2, Zs_2, loss_derivative=loss_2_derivative_wrt_A)
+        loss_2_gradients_wrt_nn_2, loss_2_last_delta_wrt_nn_2, loss_2_last_W_wrt_nn_2 = backward(nn_2, As_1[-1], As_2, Zs_2, loss_derivative=loss_2_derivative_wrt_A, alpha=alpha_2)
         gradients_2.append(loss_2_gradients_wrt_nn_2)
 
         # note: loss_constraint wrt nn_2
         loss_constraint_derivative_wrt_Y = MSE(As_3[-1], As_2[-1], as_derivative_wrt_Y=True)
-        loss_constraint_gradients_wrt_nn_2, loss_constraint_last_delta_wrt_nn_2, loss_constraint_last_W_wrt_nn_2 = backward(nn_2, As_1[-1], As_2, Zs_2, loss_derivative=loss_constraint_derivative_wrt_Y)
+        loss_constraint_gradients_wrt_nn_2, loss_constraint_last_delta_wrt_nn_2, loss_constraint_last_W_wrt_nn_2 = backward(nn_2, As_1[-1], As_2, Zs_2, loss_derivative=loss_constraint_derivative_wrt_Y, alpha=alpha_constraint)
         gradients_2.append(loss_constraint_gradients_wrt_nn_2)
 
         # note: loss_3 wrt nn_3
         loss_3_derivative_wrt_A = MSE(As_3[-1], Y_2_and_3, as_derivative_wrt_A=True)
-        loss_3_gradients_wrt_nn_3, _, _ = backward(nn_3, X_1_and_3, As_3, Zs_3, loss_derivative=loss_3_derivative_wrt_A)
+        loss_3_gradients_wrt_nn_3, _, _ = backward(nn_3, X_1_and_3, As_3, Zs_3, loss_derivative=loss_3_derivative_wrt_A, alpha=alpha_3)
         gradients_3.append(loss_3_gradients_wrt_nn_3)
 
         # note: loss_constraint wrt nn_3
         loss_constraint_derivative_wrt_A = MSE(As_3[-1], As_2[-1], as_derivative_wrt_A=True)
-        loss_constraint_gradients_wrt_nn_3, _, _ = backward(nn_3, X_1_and_3, As_3, Zs_3, loss_derivative=loss_constraint_derivative_wrt_A)
+        loss_constraint_gradients_wrt_nn_3, _, _ = backward(nn_3, X_1_and_3, As_3, Zs_3, loss_derivative=loss_constraint_derivative_wrt_A, alpha=alpha_constraint)
         gradients_3.append(loss_constraint_gradients_wrt_nn_3)
 
         # note: loss_1 wrt nn_1
         loss_1_derivative_wrt_A = MSE(As_1[-1], Y_1, as_derivative_wrt_A=True)
-        loss_1_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, loss_derivative=loss_1_derivative_wrt_A)
+        loss_1_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, loss_derivative=loss_1_derivative_wrt_A, alpha=alpha_1)
         gradients_1.append(loss_1_gradients_wrt_nn_1)
 
         # note: loss_2 wrt nn_1
-        loss_2_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_2_last_delta_wrt_nn_2, W=loss_2_last_W_wrt_nn_2)
+        loss_2_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_2_last_delta_wrt_nn_2, W=loss_2_last_W_wrt_nn_2, alpha=alpha_2)
         gradients_1.append(loss_2_gradients_wrt_nn_1)
 
         # note: loss_constraint wrt nn_1
-        loss_constraint_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_constraint_last_delta_wrt_nn_2, W=loss_constraint_last_W_wrt_nn_2)
+        loss_constraint_gradients_wrt_nn_1, _, _ = backward(nn_1, X_1_and_3, As_1, Zs_1, delta=loss_constraint_last_delta_wrt_nn_2, W=loss_constraint_last_W_wrt_nn_2, alpha=alpha_constraint)
         gradients_1.append(loss_constraint_gradients_wrt_nn_1)
 
         gradients_1 = reduce_gradients(gradients_1)
@@ -102,7 +107,7 @@ def forward(nn, X):
 
     return As, Zs
 
-def backward(nn, X, As, Zs, loss_derivative=None, delta=None, W=None):
+def backward(nn, X, As, Zs, loss_derivative=None, delta=None, W=None, alpha=1):
     assert((loss_derivative is not None) != (delta is not None))
 
     number_of_layers = len(nn)
@@ -124,11 +129,11 @@ def backward(nn, X, As, Zs, loss_derivative=None, delta=None, W=None):
 
         W_gradient = None
         if l != 0:
-            W_gradient = np.matmul(As[l - 1].T, delta)
+            W_gradient = np.matmul(As[l - 1].T, delta) * alpha
         else:
-            W_gradient = np.matmul(X.T, delta)
+            W_gradient = np.matmul(X.T, delta) * alpha
 
-        b_gradient = np.sum(delta, axis=0)
+        b_gradient = np.sum(delta, axis=0) * alpha
 
         gradients[l] = (W_gradient, b_gradient)
 
